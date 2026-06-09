@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tennis Court Booking</title>
+    <style>
+:root {
+  --bg: #f7f8f6;
+  --ink: #18221d;
+  --muted: #637067;
+  --line: #dbe2d8;
+  --panel: #ffffff;
+  --accent: #1d7c53;
+  --accent-strong: #135f3f;
+  --warning: #f2b84b;
+  --clay: #c46f4f;
+  --sky: #d8eef5;
+  --shadow: 0 10px 28px rgba(19, 45, 29, 0.07);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; color: var(--ink); background: var(--bg); font-family: Inter, Segoe UI, Arial, sans-serif; }
+button, input, select { font: inherit; }
+.app-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 42px; }
+.topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; min-height: 112px; margin-bottom: 18px; }
+.eyebrow { margin: 0 0 6px; color: var(--accent-strong); font-size: 12px; font-weight: 800; letter-spacing: 0; text-transform: uppercase; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: clamp(28px, 4vw, 44px); line-height: 1; }
+h2 { margin-bottom: 14px; font-size: 22px; }
+.auth-panel { width: min(540px, 100%); padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,0.9); }
+.phone-panel { display: flex; align-items: center; gap: 10px; min-height: 30px; margin-bottom: 10px; padding: 0 2px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warning); }
+.status-dot.online { background: var(--accent); }
+.auth-grid { display: grid; grid-template-columns: 1fr 1fr 1.1fr auto; gap: 8px; align-items: end; }
+.layout { display: block; }
+.content { min-width: 0; }
+.panel, .content { border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,0.92); box-shadow: var(--shadow); }
+.panel { padding: 18px; margin-bottom: 18px; }
+.panel.compact { box-shadow: none; }
+label { display: grid; gap: 7px; margin-bottom: 0; color: var(--muted); font-size: 14px; font-weight: 700; }
+input, select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+.primary-button, .chat-button, .tabs button, .segmented button { min-height: 40px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 800; }
+.primary-button { width: 100%; min-width: 86px; background: var(--accent); color: #fff; }
+.primary-button:hover { background: var(--accent-strong); }
+.chat-button { min-width: 92px; padding: 0 14px; border: 1px solid var(--accent); background: #fff; color: var(--accent-strong); }
+.chat-button:hover { background: rgba(29,124,83,0.08); }
+.segmented { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.partner-segmented { margin-bottom: 14px; }
+.segmented button, .tabs button { border: 1px solid var(--line); background: #fff; color: var(--muted); }
+.segmented button.active, .tabs button.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+.content { padding: 18px; }
+.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.tab-page { display: none; }
+.tab-page.active { display: block; }
+.section-head { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+.section-head p:last-child { max-width: 360px; color: var(--muted); font-size: 14px; }
+.court-grid, .partner-list, .booking-list { display: grid; gap: 12px; }
+.court-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.card { min-height: 158px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.court-card { position: relative; overflow: hidden; }
+.court-card::before { content: ""; position: absolute; inset: 0; height: 8px; background: var(--court-color); }
+.card h3 { margin: 10px 0 8px; font-size: 19px; }
+.meta { color: var(--muted); font-size: 14px; }
+.price { margin-top: 18px; font-size: 26px; font-weight: 900; }
+.badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.badge { padding: 6px 9px; border-radius: 999px; background: var(--sky); color: #1d5361; font-size: 12px; font-weight: 800; }
+.booking-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.booking-form label { margin-bottom: 0; }
+.booking-form .primary-button { align-self: end; }
+.booking-item, .partner-card { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+.empty { padding: 18px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); background: rgba(255,255,255,0.72); }
+.chat-overlay { position: fixed; inset: 0; background: rgba(10,25,16,0.35); backdrop-filter: blur(2px); z-index: 100; animation: fadeIn 0.18s ease; }
+.chat-overlay[hidden] { display: none; }
+.chat-modal { position: fixed; bottom: 28px; right: 28px; width: 380px; max-width: calc(100vw - 32px); max-height: 520px; display: flex; flex-direction: column; border-radius: 16px; background: #fff; box-shadow: 0 24px 60px rgba(10,30,18,0.22), 0 2px 8px rgba(10,30,18,0.08); z-index: 101; overflow: hidden; animation: slideUp 0.22s cubic-bezier(0.34,1.4,0.64,1); }
+.chat-modal[hidden] { display: none; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.chat-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: var(--accent); color: #fff; }
+.chat-modal-info { display: flex; align-items: center; gap: 12px; }
+.chat-avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.25); color: #fff; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.chat-modal-header .eyebrow { color: rgba(255,255,255,0.75); }
+.chat-modal-header h3 { color: #fff; }
+.chat-close { width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(255,255,255,0.18); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; }
+.chat-close:hover { background: rgba(255,255,255,0.32); }
+.chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--bg); min-height: 200px; max-height: 340px; }
+.chat-messages p { margin: 0; padding: 10px 13px; border-radius: 12px; font-size: 14px; line-height: 1.5; max-width: 88%; }
+.chat-messages p.msg-them { background: #fff; border: 1px solid var(--line); align-self: flex-start; border-bottom-left-radius: 4px; color: var(--ink); }
+.chat-messages p.msg-me { background: var(--accent); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.chat-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); background: #fff; }
+.chat-form input { min-height: 38px; border-radius: 20px; padding: 8px 14px; font-size: 14px; border: 1px solid var(--line); }
+.chat-form input:focus { outline: none; border-color: var(--accent); }
+.send-button { width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--accent); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0; }
+.send-button:hover { background: var(--accent-strong); }
+@media (max-width: 900px) {
+  .auth-grid, .court-grid, .booking-form { grid-template-columns: 1fr; }
+  .topbar, .section-head, .booking-item, .partner-card, .chat-form { align-items: stretch; grid-template-columns: 1fr; flex-direction: column; }
+  .phone-panel { min-width: 0; }
+  .segmented { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .app-shell { width: min(100% - 20px, 1180px); padding-top: 16px; }
+  .tabs, .segmented { grid-template-columns: 1fr; }
+}
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Tennis Club</p>
+          <h1>Бронирование кортов</h1>
+        </div>
+        <form class="auth-panel" id="registerForm">
+          <div class="phone-panel" id="profileSummary">
+            <span class="status-dot"></span>
+            <span>Войдите по телефону</span>
+          </div>
+          <div class="auth-grid">
+            <label>Имя<input id="name" type="text" placeholder="Аружан / Анна" required /></label>
+            <label>Телефон<input id="phone" type="tel" placeholder="+7 777 123 45 67" required /></label>
+            <label>Уровень
+              <select id="level" required>
+                <option value="beginner">Новичок / Бастаушы</option>
+                <option value="amateur">Любитель / Әуесқой</option>
+                <option value="advanced">Продвинутый / Тәжірибелі</option>
+                <option value="pro">Профи / Кәсіби</option>
+              </select>
+            </label>
+            <button class="primary-button" type="submit">Войти</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="layout">
+        <section class="content">
+          <div class="tabs" id="tabs">
+            <button type="button" class="active" data-tab="courts">Корты</button>
+            <button type="button" data-tab="booking">Бронирование</button>
+            <button type="button" data-tab="partners">Напарники</button>
+          </div>
+
+          <section class="tab-page active" id="courts">
+            <div class="section-head">
+              <div><p class="eyebrow">Цены</p><h2>Доступные корты</h2></div>
+              <p>Стоимость указана за 1 час.</p>
+            </div>
+            <div class="court-grid" id="courtList"></div>
+          </section>
+
+          <section class="tab-page" id="booking">
+            <div class="section-head">
+              <div><p class="eyebrow">Запись</p><h2>Выберите время</h2></div>
+              <p>Можно забронировать только после регистрации.</p>
+            </div>
+            <form class="booking-form" id="bookingForm">
+              <label>Корт<select id="courtSelect" required></select></label>
+              <label>Дата<input id="bookingDate" type="date" required /></label>
+              <label>Время<select id="timeSelect" required></select></label>
+              <label>Нужен напарник?
+                <select id="needsPartner">
+                  <option value="yes">Да, показать меня в поиске</option>
+                  <option value="no">Нет, играю со своим</option>
+                </select>
+              </label>
+              <button class="primary-button" type="submit">Забронировать</button>
+            </form>
+            <div class="booking-list" id="bookingList"></div>
+          </section>
+
+          <section class="tab-page" id="partners">
+            <div class="section-head">
+              <div><p class="eyebrow">Матчи</p><h2>Найти напарника</h2></div>
+              <p>Игроки сгруппированы по уровню, чтобы было проще подобрать игру.</p>
+            </div>
+            <div class="segmented partner-segmented" id="partnerFilter">
+              <button type="button" class="active" data-level="all">Все</button>
+              <button type="button" data-level="beginner">Новички</button>
+              <button type="button" data-level="amateur">Любители</button>
+              <button type="button" data-level="advanced">Сильные</button>
+              <button type="button" data-level="pro">Профи</button>
+            </div>
+            <div class="partner-list" id="partnerList"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <div class="chat-overlay" id="chatOverlay" hidden></div>
+    <div class="chat-modal" id="chatPanel" hidden>
+      <div class="chat-modal-header">
+        <div class="chat-modal-info">
+          <div class="chat-avatar" id="chatAvatar">А</div>
+          <div>
+            <p class="eyebrow" style="margin:0">Напарник</p>
+            <h3 id="chatTitle" style="margin:0;font-size:17px">Игрок</h3>
+          </div>
+        </div>
+        <button class="chat-close" id="chatClose" type="button" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <form class="chat-form" id="chatForm">
+        <input id="chatInput" type="text" placeholder="Написать сообщение..." required autocomplete="off" />
+        <button class="send-button" type="submit" aria-label="Отправить">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </form>
+    </div>
+
+    <script>
+const courts = [
+  { id: "center", name: "Центральный корт", surface: "Хард, крытый", price: 12000, color: "#1d7c53", levels: ["Любитель", "Продвинутый", "Профи"] },
+  { id: "clay", name: "Грунтовый корт", surface: "Открытый грунт", price: 9000, color: "#c46f4f", levels: ["Новичок", "Любитель", "Продвинутый"] },
+  { id: "training", name: "Тренировочный корт", surface: "Хард, открытый", price: 6500, color: "#4c7fb0", levels: ["Новичок", "Любитель"] },
+];
+const players = [
+  { name: "Аружан", phone: "+7 777 701 22 11", level: "advanced", time: "Сегодня 19:00" },
+  { name: "Анна", phone: "+7 705 442 18 00", level: "amateur", time: "Завтра 08:00" },
+  { name: "Ерлан", phone: "+7 701 300 40 15", level: "beginner", time: "Суббота 10:00" },
+  { name: "Сергей", phone: "+7 747 812 33 20", level: "pro", time: "Пятница 20:00" },
+];
+const levelLabels = { beginner: "Новичок", amateur: "Любитель", advanced: "Продвинутый", pro: "Профи" };
+const timeSlots = ["07:00", "08:00", "09:00", "18:00", "19:00", "20:00", "21:00"];
+const storeKey = "tennis-booking-demo";
+let state = loadState();
+let partnerLevel = "all";
+let activeChatPlayer = null;
+const elements = {
+  profileSummary: document.querySelector("#profileSummary"),
+  registerForm: document.querySelector("#registerForm"),
+  courtList: document.querySelector("#courtList"),
+  courtSelect: document.querySelector("#courtSelect"),
+  bookingDate: document.querySelector("#bookingDate"),
+  timeSelect: document.querySelector("#timeSelect"),
+  bookingForm: document.querySelector("#bookingForm"),
+  bookingList: document.querySelector("#bookingList"),
+  partnerList: document.querySelector("#partnerList"),
+  partnerFilter: document.querySelector("#partnerFilter"),
+  chatPanel: document.querySelector("#chatPanel"),
+  chatOverlay: document.querySelector("#chatOverlay"),
+  chatClose: document.querySelector("#chatClose"),
+  chatTitle: document.querySelector("#chatTitle"),
+  chatAvatar: document.querySelector("#chatAvatar"),
+  chatMessages: document.querySelector("#chatMessages"),
+  chatForm: document.querySelector("#chatForm"),
+  chatInput: document.querySelector("#chatInput"),
+  tabs: document.querySelector("#tabs"),
+};
+function loadState() {
+  const saved = localStorage.getItem(storeKey);
+  if (!saved) return { user: null, bookings: [] };
+  try { return JSON.parse(saved); } catch { return { user: null, bookings: [] }; }
+}
+function saveState() { localStorage.setItem(storeKey, JSON.stringify(state)); }
+function formatPrice(v) { return new Intl.NumberFormat("ru-RU").format(v) + " тг"; }
+function escapeHtml(v) { return v.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+function createBookingId() { return crypto.randomUUID ? crypto.randomUUID() : `booking-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
+function renderProfile() {
+  const dot = elements.profileSummary.querySelector(".status-dot");
+  if (!state.user) { dot.classList.remove("online"); elements.profileSummary.lastElementChild.textContent = "Войдите по номеру телефона"; return; }
+  dot.classList.add("online");
+  elements.profileSummary.lastElementChild.textContent = `${state.user.name} · ${levelLabels[state.user.level]} · ${state.user.phone}`;
+}
+function renderCourts() {
+  elements.courtList.innerHTML = courts.map((c) => `<article class="card court-card" style="--court-color:${c.color}"><h3>${c.name}</h3><p class="meta">${c.surface}</p><div class="price">${formatPrice(c.price)}</div><div class="badge-row">${c.levels.map((l) => `<span class="badge">${l}</span>`).join("")}</div></article>`).join("");
+  elements.courtSelect.innerHTML = courts.map((c) => `<option value="${c.id}">${c.name} - ${formatPrice(c.price)}</option>`).join("");
+}
+function renderTimeSlots() {
+  elements.timeSelect.innerHTML = timeSlots.map((s) => `<option value="${s}">${s}</option>`).join("");
+  const today = new Date().toISOString().slice(0, 10);
+  elements.bookingDate.min = today;
+  elements.bookingDate.value ||= today;
+}
+function renderBookings() {
+  if (!state.bookings.length) { elements.bookingList.innerHTML = `<p class="empty">Пока нет бронирований.</p>`; return; }
+  elements.bookingList.innerHTML = state.bookings.map((b) => {
+    const c = courts.find((x) => x.id === b.courtId);
+    return `<article class="card booking-item"><div><h3>${c.name}</h3><p class="meta">${b.date}, ${b.time} · ${b.name} · ${levelLabels[b.level]}</p><div class="badge-row"><span class="badge">${formatPrice(c.price)}</span><span class="badge">${b.needsPartner ? "Ищет напарника" : "Напарник уже есть"}</span></div></div><strong>${b.phone}</strong></article>`;
+  }).join("");
+}
+function getVisiblePartners() {
+  const bp = state.bookings.filter((b) => b.needsPartner).map((b) => ({ name: b.name, phone: b.phone, level: b.level, time: `${b.date} ${b.time}` }));
+  const all = [...players, ...bp];
+  return partnerLevel === "all" ? all : all.filter((p) => p.level === partnerLevel);
+}
+function renderPartners() {
+  const vp = getVisiblePartners();
+  if (!vp.length) { elements.partnerList.innerHTML = `<p class="empty">Подходящих напарников пока нет.</p>`; return; }
+  elements.partnerList.innerHTML = vp.map((p) => `<article class="card partner-card"><div><h3>${p.name}</h3><p class="meta">${levelLabels[p.level]} · ${p.time}</p><div class="badge-row"><span class="badge">Телефон подтвержден</span></div></div><button class="chat-button" type="button" data-player="${p.name}">Чат</button></article>`).join("");
+}
+function renderChat() {
+  if (!activeChatPlayer) { elements.chatPanel.hidden = true; elements.chatOverlay.hidden = true; document.body.style.overflow = ""; return; }
+  elements.chatPanel.hidden = false; elements.chatOverlay.hidden = false; document.body.style.overflow = "hidden";
+  elements.chatTitle.textContent = activeChatPlayer.name;
+  elements.chatAvatar.textContent = activeChatPlayer.name.charAt(0).toUpperCase();
+  elements.chatMessages.innerHTML = `<p class="msg-them"><strong>${activeChatPlayer.name}:</strong> Привет! Готов(а) обсудить время игры 🎾</p>`;
+  elements.chatInput.focus();
+}
+function renderAll() { renderProfile(); renderCourts(); renderTimeSlots(); renderBookings(); renderPartners(); renderChat(); }
+elements.registerForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  state.user = { name: document.querySelector("#name").value.trim(), phone: document.querySelector("#phone").value.trim(), level: document.querySelector("#level").value };
+  saveState(); renderAll();
+});
+elements.bookingForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!state.user) { alert("Сначала зарегистрируйтесь по номеру телефона."); return; }
+  const b = { id: createBookingId(), name: state.user.name, phone: state.user.phone, level: state.user.level, courtId: elements.courtSelect.value, date: elements.bookingDate.value, time: elements.timeSelect.value, needsPartner: document.querySelector("#needsPartner").value === "yes" };
+  if (state.bookings.some((x) => x.courtId === b.courtId && x.date === b.date && x.time === b.time)) { alert("Это время уже занято. Выберите другой слот."); return; }
+  state.bookings.unshift(b); saveState(); renderAll();
+});
+elements.tabs.addEventListener("click", (e) => {
+  const btn = e.target.closest("button"); if (!btn) return;
+  document.querySelectorAll(".tabs button").forEach((x) => x.classList.remove("active"));
+  document.querySelectorAll(".tab-page").forEach((x) => x.classList.remove("active"));
+  btn.classList.add("active"); document.querySelector(`#${btn.dataset.tab}`).classList.add("active");
+});
+elements.partnerFilter.addEventListener("click", (e) => {
+  const btn = e.target.closest("button"); if (!btn) return;
+  partnerLevel = btn.dataset.level;
+  elements.partnerFilter.querySelectorAll("button").forEach((x) => x.classList.remove("active"));
+  btn.classList.add("active"); renderPartners();
+});
+elements.partnerList.addEventListener("click", (e) => {
+  const btn = e.target.closest(".chat-button"); if (!btn) return;
+  activeChatPlayer = getVisiblePartners().find((p) => p.name === btn.dataset.player); renderChat();
+});
+elements.chatForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const msg = elements.chatInput.value.trim(); if (!msg || !activeChatPlayer) return;
+  elements.chatMessages.insertAdjacentHTML("beforeend", `<p class="msg-me">${escapeHtml(msg)}</p>`);
+  elements.chatInput.value = ""; elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+});
+function closeChat() { activeChatPlayer = null; renderChat(); }
+elements.chatClose.addEventListener("click", closeChat);
+elements.chatOverlay.addEventListener("click", closeChat);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && activeChatPlayer) closeChat(); });
+renderAll();
+    </script>
+  </body>
+</html>
