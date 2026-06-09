@@ -31,7 +31,13 @@ h2 { margin-bottom: 14px; font-size: 22px; }
 .phone-panel { display: flex; align-items: center; gap: 10px; min-height: 30px; margin-bottom: 10px; padding: 0 2px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warning); }
 .status-dot.online { background: var(--accent); }
-.auth-grid { display: grid; grid-template-columns: 1fr 1fr 1.1fr auto; gap: 8px; align-items: end; }
+.auth-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+.auth-grid-reg { display: grid; grid-template-columns: 1fr 1fr 1.1fr auto; gap: 8px; align-items: end; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.auth-tabs button { min-height: 32px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--muted); font-size: 13px; font-weight: 800; cursor: pointer; }
+.auth-tabs button.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+.auth-form { display: none; }
+.auth-form.active { display: block; }
 .layout { display: block; }
 .content { min-width: 0; }
 .panel, .content { border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,0.92); box-shadow: var(--shadow); }
@@ -110,25 +116,42 @@ input, select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px so
           <p class="eyebrow">Tennis Club</p>
           <h1>Бронирование кортов</h1>
         </div>
-        <form class="auth-panel" id="registerForm">
+        <div class="auth-panel">
           <div class="phone-panel" id="profileSummary">
             <span class="status-dot"></span>
             <span>Войдите по телефону</span>
           </div>
-          <div class="auth-grid">
-            <label>Имя<input id="name" type="text" placeholder="Аружан / Анна" required /></label>
-            <label>Телефон<input id="phone" type="tel" placeholder="+7 777 123 45 67" required /></label>
-            <label>Уровень
-              <select id="level" required>
-                <option value="beginner">Новичок / Бастаушы</option>
-                <option value="amateur">Любитель / Әуесқой</option>
-                <option value="advanced">Продвинутый / Тәжірибелі</option>
-                <option value="pro">Профи / Кәсіби</option>
-              </select>
-            </label>
-            <button class="primary-button" type="submit">Войти</button>
+          <div class="auth-tabs">
+            <button type="button" class="active" id="tabLogin">Войти</button>
+            <button type="button" id="tabRegister">Регистрация</button>
           </div>
-        </form>
+
+          <!-- Войти -->
+          <form class="auth-form active" id="loginForm">
+            <div class="auth-grid">
+              <label>Телефон<input id="loginPhone" type="tel" placeholder="+7 777 123 45 67" required /></label>
+              <label>Имя<input id="loginName" type="text" placeholder="Аружан / Анна" required /></label>
+              <button class="primary-button" type="submit">Войти</button>
+            </div>
+          </form>
+
+          <!-- Регистрация -->
+          <form class="auth-form" id="registerForm">
+            <div class="auth-grid-reg">
+              <label>Имя<input id="name" type="text" placeholder="Аружан / Анна" required /></label>
+              <label>Телефон<input id="phone" type="tel" placeholder="+7 777 123 45 67" required /></label>
+              <label>Уровень
+                <select id="level" required>
+                  <option value="beginner">Новичок / Бастаушы</option>
+                  <option value="amateur">Любитель / Әуесқой</option>
+                  <option value="advanced">Продвинутый / Тәжірибелі</option>
+                  <option value="pro">Профи / Кәсіби</option>
+                </select>
+              </label>
+              <button class="primary-button" type="submit">Создать</button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <section class="layout">
@@ -320,20 +343,51 @@ async function loadBookings() {
   renderPartners();
 }
 
-// ── Регистрация / вход ───────────────────────────────────────
-elements.registerForm.addEventListener("submit", async (e) => {
+// ── Переключение вкладок Войти / Регистрация ─────────────────
+document.querySelector("#tabLogin").addEventListener("click", () => {
+  document.querySelector("#tabLogin").classList.add("active");
+  document.querySelector("#tabRegister").classList.remove("active");
+  document.querySelector("#loginForm").classList.add("active");
+  document.querySelector("#registerForm").classList.remove("active");
+});
+document.querySelector("#tabRegister").addEventListener("click", () => {
+  document.querySelector("#tabRegister").classList.add("active");
+  document.querySelector("#tabLogin").classList.remove("active");
+  document.querySelector("#registerForm").classList.add("active");
+  document.querySelector("#loginForm").classList.remove("active");
+});
+
+// ── Войти (поиск по телефону + имени) ───────────────────────
+document.querySelector("#loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const phone = document.querySelector("#loginPhone").value.trim();
+  const name  = document.querySelector("#loginName").value.trim();
+  const { data, error } = await sb.from("users").select("*").eq("phone", phone).maybeSingle();
+  if (error) { alert("Ошибка: " + error.message); return; }
+  if (!data) { alert("Пользователь с таким телефоном не найден.\nСначала зарегистрируйтесь!"); return; }
+  state.user = { name: data.name, phone: data.phone, level: data.level };
+  saveLocalUser(state.user);
+  renderAll();
+  await loadBookings();
+});
+
+// ── Регистрация (создание нового пользователя) ───────────────
+document.querySelector("#registerForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const user = {
     name:  document.querySelector("#name").value.trim(),
     phone: document.querySelector("#phone").value.trim(),
     level: document.querySelector("#level").value,
   };
-  // Upsert: если такой телефон уже есть — обновим имя/уровень
-  const { error } = await sb.from("users").upsert({ name: user.name, phone: user.phone, level: user.level }, { onConflict: "phone" });
-  if (error) { alert("Ошибка входа: " + error.message); return; }
+  // Проверяем — нет ли уже такого телефона
+  const { data: existing } = await sb.from("users").select("id").eq("phone", user.phone).maybeSingle();
+  if (existing) { alert("Этот номер уже зарегистрирован. Войдите через вкладку \"Войти\"."); return; }
+  const { error } = await sb.from("users").insert({ name: user.name, phone: user.phone, level: user.level });
+  if (error) { alert("Ошибка регистрации: " + error.message); return; }
   state.user = user;
   saveLocalUser(user);
   renderAll();
+  await loadBookings();
 });
 
 // ── Бронирование ─────────────────────────────────────────────
