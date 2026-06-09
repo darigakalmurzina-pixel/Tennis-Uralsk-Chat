@@ -206,54 +206,67 @@ input, select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px so
       </form>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+// ── Supabase ────────────────────────────────────────────────
+const SUPABASE_URL = "https://zjqxkdoguuqjdkjgsrju.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpqcXhrZG9ndXVxamRramdzcmp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODE4NTAsImV4cCI6MjA5NjU1Nzg1MH0.ZnTkjiBaB1eZMI3swf9603RP4MQWs-fPzvkLHSEnDI8";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── Статические данные ──────────────────────────────────────
 const courts = [
-  { id: "center", name: "Центральный корт", surface: "Хард, крытый", price: 12000, color: "#1d7c53", levels: ["Любитель", "Продвинутый", "Профи"] },
-  { id: "clay", name: "Грунтовый корт", surface: "Открытый грунт", price: 9000, color: "#c46f4f", levels: ["Новичок", "Любитель", "Продвинутый"] },
-  { id: "training", name: "Тренировочный корт", surface: "Хард, открытый", price: 6500, color: "#4c7fb0", levels: ["Новичок", "Любитель"] },
+  { id: "center",   name: "Центральный корт",   surface: "Хард, крытый",    price: 12000, color: "#1d7c53", levels: ["Любитель", "Продвинутый", "Профи"] },
+  { id: "clay",     name: "Грунтовый корт",      surface: "Открытый грунт",  price: 9000,  color: "#c46f4f", levels: ["Новичок", "Любитель", "Продвинутый"] },
+  { id: "training", name: "Тренировочный корт",  surface: "Хард, открытый",  price: 6500,  color: "#4c7fb0", levels: ["Новичок", "Любитель"] },
 ];
 const players = [
   { name: "Аружан", phone: "+7 777 701 22 11", level: "advanced", time: "Сегодня 19:00" },
-  { name: "Анна", phone: "+7 705 442 18 00", level: "amateur", time: "Завтра 08:00" },
-  { name: "Ерлан", phone: "+7 701 300 40 15", level: "beginner", time: "Суббота 10:00" },
-  { name: "Сергей", phone: "+7 747 812 33 20", level: "pro", time: "Пятница 20:00" },
+  { name: "Анна",   phone: "+7 705 442 18 00", level: "amateur",  time: "Завтра 08:00" },
+  { name: "Ерлан",  phone: "+7 701 300 40 15", level: "beginner", time: "Суббота 10:00" },
+  { name: "Сергей", phone: "+7 747 812 33 20", level: "pro",      time: "Пятница 20:00" },
 ];
 const levelLabels = { beginner: "Новичок", amateur: "Любитель", advanced: "Продвинутый", pro: "Профи" };
 const timeSlots = ["07:00", "08:00", "09:00", "18:00", "19:00", "20:00", "21:00"];
-const storeKey = "tennis-booking-demo";
-let state = loadState();
+
+// ── Состояние ───────────────────────────────────────────────
+let state = { user: null, bookings: [] };
 let partnerLevel = "all";
 let activeChatPlayer = null;
+
+// Пользователь сохраняется локально (сессия)
+function loadLocalUser() {
+  try { return JSON.parse(localStorage.getItem("tennis-user")) || null; } catch { return null; }
+}
+function saveLocalUser(u) { localStorage.setItem("tennis-user", JSON.stringify(u)); }
+
+// ── DOM-элементы ────────────────────────────────────────────
 const elements = {
   profileSummary: document.querySelector("#profileSummary"),
-  registerForm: document.querySelector("#registerForm"),
-  courtList: document.querySelector("#courtList"),
-  courtSelect: document.querySelector("#courtSelect"),
-  bookingDate: document.querySelector("#bookingDate"),
-  timeSelect: document.querySelector("#timeSelect"),
-  bookingForm: document.querySelector("#bookingForm"),
-  bookingList: document.querySelector("#bookingList"),
-  partnerList: document.querySelector("#partnerList"),
-  partnerFilter: document.querySelector("#partnerFilter"),
-  chatPanel: document.querySelector("#chatPanel"),
-  chatOverlay: document.querySelector("#chatOverlay"),
-  chatClose: document.querySelector("#chatClose"),
-  chatTitle: document.querySelector("#chatTitle"),
-  chatAvatar: document.querySelector("#chatAvatar"),
-  chatMessages: document.querySelector("#chatMessages"),
-  chatForm: document.querySelector("#chatForm"),
-  chatInput: document.querySelector("#chatInput"),
-  tabs: document.querySelector("#tabs"),
+  registerForm:   document.querySelector("#registerForm"),
+  courtList:      document.querySelector("#courtList"),
+  courtSelect:    document.querySelector("#courtSelect"),
+  bookingDate:    document.querySelector("#bookingDate"),
+  timeSelect:     document.querySelector("#timeSelect"),
+  bookingForm:    document.querySelector("#bookingForm"),
+  bookingList:    document.querySelector("#bookingList"),
+  partnerList:    document.querySelector("#partnerList"),
+  partnerFilter:  document.querySelector("#partnerFilter"),
+  chatPanel:      document.querySelector("#chatPanel"),
+  chatOverlay:    document.querySelector("#chatOverlay"),
+  chatClose:      document.querySelector("#chatClose"),
+  chatTitle:      document.querySelector("#chatTitle"),
+  chatAvatar:     document.querySelector("#chatAvatar"),
+  chatMessages:   document.querySelector("#chatMessages"),
+  chatForm:       document.querySelector("#chatForm"),
+  chatInput:      document.querySelector("#chatInput"),
+  tabs:           document.querySelector("#tabs"),
 };
-function loadState() {
-  const saved = localStorage.getItem(storeKey);
-  if (!saved) return { user: null, bookings: [] };
-  try { return JSON.parse(saved); } catch { return { user: null, bookings: [] }; }
-}
-function saveState() { localStorage.setItem(storeKey, JSON.stringify(state)); }
+
+// ── Утилиты ─────────────────────────────────────────────────
 function formatPrice(v) { return new Intl.NumberFormat("ru-RU").format(v) + " тг"; }
 function escapeHtml(v) { return v.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
-function createBookingId() { return crypto.randomUUID ? crypto.randomUUID() : `booking-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
+
+// ── Рендер ──────────────────────────────────────────────────
 function renderProfile() {
   const dot = elements.profileSummary.querySelector(".status-dot");
   if (!state.user) { dot.classList.remove("online"); elements.profileSummary.lastElementChild.textContent = "Войдите по номеру телефона"; return; }
@@ -273,12 +286,13 @@ function renderTimeSlots() {
 function renderBookings() {
   if (!state.bookings.length) { elements.bookingList.innerHTML = `<p class="empty">Пока нет бронирований.</p>`; return; }
   elements.bookingList.innerHTML = state.bookings.map((b) => {
-    const c = courts.find((x) => x.id === b.courtId);
-    return `<article class="card booking-item"><div><h3>${c.name}</h3><p class="meta">${b.date}, ${b.time} · ${b.name} · ${levelLabels[b.level]}</p><div class="badge-row"><span class="badge">${formatPrice(c.price)}</span><span class="badge">${b.needsPartner ? "Ищет напарника" : "Напарник уже есть"}</span></div></div><strong>${b.phone}</strong></article>`;
+    const c = courts.find((x) => x.id === b.court_id);
+    if (!c) return "";
+    return `<article class="card booking-item"><div><h3>${c.name}</h3><p class="meta">${b.date}, ${b.time} · ${b.name} · ${levelLabels[b.level]}</p><div class="badge-row"><span class="badge">${formatPrice(c.price)}</span><span class="badge">${b.needs_partner ? "Ищет напарника" : "Напарник уже есть"}</span></div></div><strong>${b.phone}</strong></article>`;
   }).join("");
 }
 function getVisiblePartners() {
-  const bp = state.bookings.filter((b) => b.needsPartner).map((b) => ({ name: b.name, phone: b.phone, level: b.level, time: `${b.date} ${b.time}` }));
+  const bp = state.bookings.filter((b) => b.needs_partner).map((b) => ({ name: b.name, phone: b.phone, level: b.level, time: `${b.date} ${b.time}` }));
   const all = [...players, ...bp];
   return partnerLevel === "all" ? all : all.filter((p) => p.level === partnerLevel);
 }
@@ -296,18 +310,55 @@ function renderChat() {
   elements.chatInput.focus();
 }
 function renderAll() { renderProfile(); renderCourts(); renderTimeSlots(); renderBookings(); renderPartners(); renderChat(); }
-elements.registerForm.addEventListener("submit", (e) => {
+
+// ── Supabase: загрузка бронирований ─────────────────────────
+async function loadBookings() {
+  const { data, error } = await sb.from("bookings").select("*").order("created_at", { ascending: false });
+  if (error) { console.error("Ошибка загрузки бронирований:", error.message); return; }
+  state.bookings = data || [];
+  renderBookings();
+  renderPartners();
+}
+
+// ── Регистрация / вход ───────────────────────────────────────
+elements.registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  state.user = { name: document.querySelector("#name").value.trim(), phone: document.querySelector("#phone").value.trim(), level: document.querySelector("#level").value };
-  saveState(); renderAll();
+  const user = {
+    name:  document.querySelector("#name").value.trim(),
+    phone: document.querySelector("#phone").value.trim(),
+    level: document.querySelector("#level").value,
+  };
+  // Upsert: если такой телефон уже есть — обновим имя/уровень
+  const { error } = await sb.from("users").upsert({ name: user.name, phone: user.phone, level: user.level }, { onConflict: "phone" });
+  if (error) { alert("Ошибка входа: " + error.message); return; }
+  state.user = user;
+  saveLocalUser(user);
+  renderAll();
 });
-elements.bookingForm.addEventListener("submit", (e) => {
+
+// ── Бронирование ─────────────────────────────────────────────
+elements.bookingForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!state.user) { alert("Сначала зарегистрируйтесь по номеру телефона."); return; }
-  const b = { id: createBookingId(), name: state.user.name, phone: state.user.phone, level: state.user.level, courtId: elements.courtSelect.value, date: elements.bookingDate.value, time: elements.timeSelect.value, needsPartner: document.querySelector("#needsPartner").value === "yes" };
-  if (state.bookings.some((x) => x.courtId === b.courtId && x.date === b.date && x.time === b.time)) { alert("Это время уже занято. Выберите другой слот."); return; }
-  state.bookings.unshift(b); saveState(); renderAll();
+  const booking = {
+    name:           state.user.name,
+    phone:          state.user.phone,
+    level:          state.user.level,
+    court_id:       elements.courtSelect.value,
+    date:           elements.bookingDate.value,
+    time:           elements.timeSelect.value,
+    needs_partner:  document.querySelector("#needsPartner").value === "yes",
+  };
+  const { error } = await sb.from("bookings").insert(booking);
+  if (error) {
+    if (error.code === "23505") { alert("Это время уже занято. Выберите другой слот."); }
+    else { alert("Ошибка бронирования: " + error.message); }
+    return;
+  }
+  await loadBookings();
 });
+
+// ── Вкладки ──────────────────────────────────────────────────
 elements.tabs.addEventListener("click", (e) => {
   const btn = e.target.closest("button"); if (!btn) return;
   document.querySelectorAll(".tabs button").forEach((x) => x.classList.remove("active"));
@@ -334,7 +385,16 @@ function closeChat() { activeChatPlayer = null; renderChat(); }
 elements.chatClose.addEventListener("click", closeChat);
 elements.chatOverlay.addEventListener("click", closeChat);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && activeChatPlayer) closeChat(); });
+
+// ── Realtime: обновление при новых бронированиях ─────────────
+sb.channel("bookings-channel")
+  .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, () => loadBookings())
+  .subscribe();
+
+// ── Инициализация ────────────────────────────────────────────
+state.user = loadLocalUser();
 renderAll();
+loadBookings();
     </script>
   </body>
 </html>
